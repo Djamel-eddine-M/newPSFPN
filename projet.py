@@ -1612,7 +1612,7 @@ print("k vaut")
 print(k)
 '''
 print("")
-
+#version naive
 def order(P,p):
     if(isinstance(P,Inf)):
         return 1
@@ -1629,6 +1629,58 @@ def order(P,p):
 print(order(point1,P))
 print(k)
 print(k*point1)
+
+#algorithme rho pour resoudre ECDLP
+def rho_probability(P,A,B,Q,p):
+    prob=random.randint(1,9999)%3
+    if(prob %3 == 0):
+        A=2*A % p
+        B=2*B % p
+        if(A==0):
+            A=A+1
+        if(B==0):
+            B=B+1
+        Z=(P*A)+(Q*B)
+        return Z,A,B
+    elif(prob % 3 == 1):
+        A=A+1 % p
+        if(A==0):
+            A=A+1
+        Z=(P*A)+(Q*B)
+        return Z,A,B
+    else :
+        B=B+1 % p
+        if(B==0):
+            B=B+1
+        Z=(P*A)+(Q*B)
+        return Z,A,B
+    
+  
+
+def rho_man(P,Q,p):
+    ordre=order(P,p)
+    Ai=random.randint(1,ordre-1)
+    Bi=random.randint(1,ordre-1)
+    Zi=(P*Ai)+(Q*Bi)
+    Zibis=Zi
+    Aibis=Ai
+    Bibis=Bi
+    i=0
+    while(True):
+        Zi,Ai,Bi=rho_probability(P,Ai,Bi,Q,ordre)
+        Zibis,Aibis,Bibis=rho_probability(P,Aibis,Bibis,Q,ordre)
+        Zibis,Aibis,Bibis=rho_probability(P,Aibis,Bibis,Q,ordre)
+        print('Zi,ZIBIS,Ai,Bi,Aibis,Bibis')
+        print(Zi,Zibis,Ai,Bi,Aibis,Bibis)
+        print(i)
+        i=i+1
+        if((Bi % ordre) != (Bibis % ordre)):
+            if(Zi==Zibis) :
+                break
+    return ((Ai-Aibis) *mod_inverse(-( Bi-Bibis),ordre)) % ordre 
+
+
+
 '''        
     
 
