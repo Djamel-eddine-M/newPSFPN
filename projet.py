@@ -1555,61 +1555,6 @@ def factorise(n):
         assert is_probable_prime(p)
     return factors
 ######################################################################################
-def listeCouple(l):
-    lc=[]
-    stable=l[0]
-    k=0
-    tmp=stable
-    cpt=0
-    while k!=len(l):
-        while (tmp==stable):
-            cpt=cpt+1
-            k=k+1
-            if k<len(l):
-                tmp=l[k]
-            else:
-                break
-        lc.append((stable,cpt))
-        stable=tmp
-        cpt=0
-    return lc
-
-
-
-def OrderPoint(P,OderCurve,facto):
-    m=OderCurve
-    for i in range(len(facto)):
-        p,e=facto[i]
-        m=m//(p**e)
-        print("m vaut")
-        print(m)
-        Q=m*P
-        while isinstance(Q, Inf)==False:
-            Q=p*Q
-            m=m*p
-    return m
-
-P=1009
-seed,a,b=random_elliptiqueV4(P)
-courbe=EllipticCurve3(a,b,P)  
-print(courbe)
-sed,yu,point1=random_point(a,seed,b,P)
-print(point1)
-Ordercurve=reduced_computation_schoof_algorithm(P,a,b)
-print("le nombre de point de la courbe vautvaut")
-
-print(Ordercurve)
-
-
-ll=factorise(Ordercurve)
-l=listeCouple(ll)
-print("l vaut")
-print(l)
-k=OrderPoint(point1,Ordercurve,l)
-if isinstance(k*point1, Inf):
-    print("OrderPoint fonctionne!!!!")
-print("k vaut")
-print(k)
 '''
 print("")
 #version naive
@@ -1681,7 +1626,63 @@ def rho_man(P,Q,p):
 
 
 
-'''        
+'''      
+def listeCouple(l):
+    lc=[]
+    stable=l[0]
+    k=0
+    tmp=stable
+    cpt=0
+    while k!=len(l):
+        while (tmp==stable):
+            cpt=cpt+1
+            k=k+1
+            if k<len(l):
+                tmp=l[k]
+            else:
+                break
+        lc.append((stable,cpt))
+        stable=tmp
+        cpt=0
+    return lc
+
+
+
+def OrderPoint(P,OderCurve,facto):
+    m=OderCurve
+    for i in range(len(facto)):
+        p,e=facto[i]
+        m=m//(p**e)
+        print("m vaut")
+        print(m)
+        Q=m*P
+        while isinstance(Q, Inf)==False:
+            Q=p*Q
+            m=m*p
+    return m
+
+P=1009
+seed,a,b=random_elliptiqueV4(P)
+courbe=EllipticCurve3(a,b,P)  
+print(courbe)
+sed,yu,point1=random_point(a,seed,b,P)
+print(point1)
+Ordercurve=reduced_computation_schoof_algorithm(P,a,b)
+print("le nombre de point de la courbe vautvaut")
+
+print(Ordercurve)
+
+
+ll=factorise(Ordercurve)
+l=listeCouple(ll)
+print("l vaut")
+print(l)
+k=OrderPoint(point1,Ordercurve,l)
+if isinstance(k*point1, Inf):
+    print("OrderPoint fonctionne!!!!")
+print("k vaut")
+print(k)
+  
     
 
 
