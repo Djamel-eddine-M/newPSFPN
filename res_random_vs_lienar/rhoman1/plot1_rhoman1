@@ -1,0 +1,7 @@
+plot "Complex_rho_man1" u 2:1 with linespoints
+set title "Temps en f°de (log2(p)**2)*racineBornesupHasse "
+set xlabel "Valeur de (log2(p)**2)*racineBornesupHasse" 
+set ylabel "Temps"
+set term png
+set output "1"
+replot

@@ -5,6 +5,9 @@ import hashlib
 import random
 import time
 import shlex, subprocess
+import os
+
+
 
 
 
@@ -50,7 +53,15 @@ class Point(object):
 
     def __getitem__(self, index):
         return [self.x, self.y][index]
-
+    
+    
+    def sett(self,x,y):
+        self.x = x % self.curve.p
+        self.y = y % self.curve.p
+        if not self.curve.has_point(x, y):
+            raise ValueError('{} is not on curve {}'.format(self, self.curve))
+        
+    
     def __eq__(self, Q):
         return (self.curve, self.x, self.y) == (Q.curve, Q.x, Q.y)
 
@@ -97,6 +108,8 @@ class Point(object):
 
         return R
     
+
+    
     
     def __mul__(self, n):
         
@@ -127,6 +140,8 @@ class Point(object):
 
     def __rmul__(self, n):
         return self * n
+    
+    
     
   
 class Inf(Point):
@@ -322,6 +337,62 @@ def random_point(a,seedE,b,p):
     P=u*h
     return seedp,yu,P
 
+def random_point2(a,b,p):
+    '''
+    Generate a random point on a elleptic curve on Fp
+    by using Certicom Algorithm Page 16
+    see: https://www.certicom.com/content/dam/certicom/images/pdfs/challenge-2009.pdf
+    but without the seed of curve
+    '''
+    
+    seedE=secrets.token_bytes(20)
+
+    log2 = math.log(p, 2.0)
+    t=math.ceil(log2)
+    s=math.floor((t-1)/160)
+    h=t-(160*s)
+    while(True):
+        
+        
+        m=hashlib.sha1()
+        seedp=secrets.token_bytes(20)
+        m.update(seedp)
+        hash1=m.digest()
+        tmp=[access_bit(hash1,i) for i in range(len(hash1)*8)]
+        c0=tmp[0:h] #the h rightmost bit of hash1
+        x0=c0
+        x0[len(x0)-1]=0
+        x0.reverse()
+        X=[]
+        
+        
+        
+        
+        for i in range (s,0,-1):
+            m=hashlib.sha1()
+            seed=((seedE+i )%( 2 **160))
+            m.update(seed)
+            hash2=m.digest()
+            tmp=[access_bit(hash2,i) for i in range(len(hash2)*8)]
+            tmp.reverse()
+            X=tmp+X
+        X=x0+X
+        
+        
+        
+        xu=0
+        for i in range(t):
+            xu=xu+(X[i]*(2**((t-1)-i)))
+        
+        temp=((xu**3)+(a*xu)+b)%p
+        
+        if(solution(temp,p)==True):
+            break
+    yu=tonelli(temp,p)
+    u=Point(EllipticCurve3(a,b,p),xu,yu)   
+    P=u*h
+    #print(P)
+    return P
 
 
 #Algorithme de Tonelli-Shanks
@@ -587,7 +658,7 @@ def Random_Curve_orderprime(p):
     """
     Return a curve
     with prime order
-    
+    with multiple call of sagesageMath
     """
     seed,a,b=random_elliptiqueV4(p)
     Ordre=OrderCourbe(a,b,p)
@@ -599,218 +670,38 @@ def Random_Curve_orderprime(p):
         pr=Prime(Ordre)
     return seed,a,b,Ordre
 
-        
 
-        
-def rho_probability(P,A,B,Q,p):
-    '''
-    Fonction aléatoire
-    pour la méthode rho
+
+
+def Random_Curve_orderprime2(p):
+    """
+    Return a curve(a,b)
+    with prime order
+    with one call of saheMath
+    """
+    command_line=" sage Random_Curve_orderprime.sage "+str(p)
+    args = shlex.split(command_line)
+    now = subprocess.Popen(args, stdout=subprocess.PIPE)
+    result = now.communicate()
+    a=result[0].decode("utf-8")
+    #print(a)
+    a=a.split(" ")
+    #print(a)
     
-    
-    '''
-    prob=random.randint(1,9999)%3
-    if(prob %3 == 0):
-        A=2*A % p
-        B=2*B % p
-        if(A==0):
-            A=A+1
-        if(B==0):
-            B=B+1
-        Z=(P*A)+(Q*B)
-        return Z,A,B
-    elif(prob % 3 == 1):
-        A=A+1 % p
-        if(A==0):
-            A=A+1
-        Z=(P*A)+(Q*B)
-        return Z,A,B
-    else :
-        B=B+1 % p
-        if(B==0):
-            B=B+1
-        Z=(P*A)+(Q*B)
-        return Z,A,B
-    
-  
-def rho_man(P,Q,p,ordreP):
-    '''
-    Rho algorithme
-    Return k that make
-    Q=kP
-    
-    We know that y²=x³+1304x+186
-    define an equation of a curve 
-    with prime order equal to 2411
-    Then (by Lagrange theorem)
-    the order of a point P
-    different of O have got the same order
-    
-    >>> p=2437
-    >>> a,b= 1304,186
-    >>> C=EllipticCurve3(a,b,p)
-    >>> P,ordreP=Point(C,568,2048),2411
-    >>> k=random.randint(1,ordreP-1)
-    >>> Q=k*P
-    >>> res=rho_man(P,Q,p,ordreP)
-    >>> res==k
-    True
+    #print("a vaut dans rand")
+    #print(a[0])
+    #print("b vaut dans rand")
+    #print(a[1])
+    tmp=a[2]
+    tmp=tmp[0:len(tmp)-1]
+    #print("Ordercurve vaut dans rand")
+    #print(tmp)
+    return int(a[0]),int(a[1]),int(tmp)
 
-    '''
-    Ai=random.randint(1,ordreP-1)
-    Bi=random.randint(1,ordreP-1)
-    Zi=(P*Ai)+(Q*Bi)
-    Zibis=Zi
-    Aibis=Ai
-    Bibis=Bi
-    i=0
-    while(True):
-        Zi,Ai,Bi=rho_probability(P,Ai,Bi,Q,ordreP)
-        Zibis,Aibis,Bibis=rho_probability(P,Aibis,Bibis,Q,ordreP)
-        Zibis,Aibis,Bibis=rho_probability(P,Aibis,Bibis,Q,ordreP)
-        #print('Zi,ZIBIS,Ai,Bi,Aibis,Bibis')
-        #print(Zi,Zibis,Ai,Bi,Aibis,Bibis)
-        #print(i)
-        i=i+1
-        if((Bi % ordreP) != (Bibis % ordreP)):
-            if(Zi==Zibis) :
-                break
-    return ((Ai-Aibis) *mod_inverse(-( Bi-Bibis),ordreP)) % ordreP
-
-
-
-
-if __name__ == "__main__":
-    import doctest
-    doctest.testmod(verbose=True, optionflags=doctest.ELLIPSIS)
-
-"""
-
-
-
-
-'''
-
-
-
-
-
-
-
-
-
-def Procedure(P,feinte):
-    seed,a,b=random_elliptiqueV4(P)
-    courbe=EllipticCurve3(a,b,P)  
-    print(courbe)
-    Ordercurve=OrderCourbe(a,b,P)
-    print("le nombre de point de la courbe vaut")
-    print(Ordercurve)
-    pr=Prime(Ordercurve)
-    while(feinte==1 and not pr ):
-        seed,a,b=random_elliptiqueV4(P)
-        courbe=EllipticCurve3(a,b,P)  
-        print(courbe)
-        Ordercurve=OrderCourbe(a,b,P)
-        print("le nombre de point de la courbe vaut")
-        print(Ordercurve)
-        pr=Prime(Ordercurve)
-        
-        if(pr):
-            sed,yu,point1=random_point(a,seed,b,P)
-            print(point1)
-            k=Ordercurve
-            if isinstance(k*point1, Inf):
-                print("OrderPoint fonctionne!!!!")
-            print("k vaut")
-            print(k)
-            return a,b,P,point1, Ordercurve,k
-    
-    sed,yu,point1=random_point(a,seed,b,P)
-    print(point1)
-    
-    l=factorisation(Ordercurve)
-    print("l vaut")
-    print(l)
-
-    k=OrderPoint(point1,Ordercurve,l)
-    if isinstance(k*point1, Inf):
-        print("OrderPoint fonctionne!!!!")
-    print("k vaut")
-    print(k)
-    return a,b,P,point1,Ordercurve,k
-
-'''
-
-
-
-def Procedure_complexity(p,feinte):
-    '''
-    Return a random elliptic curve over Fp (with a,b,p)
-    a point P with prime order,
-    the order of the curve,
-    the order of P
-    
-    if feinte=1
-    the order of the curve is a prime
-    
-    '''
-    
-    if(feinte==1):
-        seed,a,b,Ordercurve=Random_Curve_orderprime(p)
-        l=factorisation(Ordercurve)
-        P,OrderP=P_order_prime(a,seed,b,p,Ordercurve,l)
-        return a,b,p,P,Ordercurve,OrderP
-    
-    
-    
-    seed,a,b=random_elliptiqueV4(p)
-    Ordercurve=OrderCourbe(a,b,p)
-    l=factorisation(Ordercurve)
-    P,OrderP=P_order_prime(a,seed,b,p,Ordercurve,l)
-    return a,b,p,P,Ordercurve,OrderP
-    
-'''
-def Work(interval,nb_primes,feinte):
-    #fichier = open("data", "w")
-    listeprimes=Listeprime(interval,nb_primes)
-    print(listeprimes)
-    print("La liste des premiers est générer")
-    for i in range(len(listeprimes)):
-        a,b,p,P,Ordercurve,ordreP=Procedure_complexity(int(listeprimes[i]),feinte)
-        print("L'odre de la courbe  est :")
-        print(Ordercurve)
-        print("L'odre de P est :")
-        print(ordreP)
-        k=random.randint(1,ordreP-1)
-        Q=k*P
-        print("Q=")
-        print(k)
-        print("fois P")
-        res=rho_man(P,Q,p,ordreP)
-        print("rho renvoie :")
-        print(res)
-        if(k==res):
-            print("RHO OK p=")
-            print(p)
-            #fichier.write("Bonjour monde")
-            
-            
-        else:
-            print("error p=")
-            print(p)
-            return
-        
-
-        
-        
-   
-Work(10,100,1)
-'''
 def Stock(interval,nb_primes):
     '''
     Write in a file for every line:
-        -parameters of elliptic curve with prime Order (p,a,b) 
+        -parameters of a random elliptic curve with prime Order (p,a,b) 
         - a point P on the elliptic curve (Xp,Yp)
         -the order of the curve= order of P
     '''
@@ -819,29 +710,333 @@ def Stock(interval,nb_primes):
     print(listeprimes)
     print("La liste des premiers est générer")
     for i in range(len(listeprimes)):
-        a,b,p,P,Ordercurve,ordreP=Procedure_complexity(int(listeprimes[i]),1)
+        print("i vaut")
+        print(i)
+        p=int(listeprimes[i])
+        a,b,Ordercurve=Random_Curve_orderprime2(p)
+        P=random_point2(a,b,p)
+        #print(P)
         zprint=str(p)+" "+str(a)+" "+str(b)+" "+str(P[0])+" "+str(P[1])+" "+str(Ordercurve)
         print(zprint)
         z=zprint+"\n"
+        
         fichier.write(z)
     fichier.close()
-   
+def Stock2(rank_firstprime,nb_primes,pas):
+    '''
+    Write in a file for every line:
+        -parameters of a random elliptic curve with prime Order (p,a,b) 
+        - a point P on the elliptic curve (Xp,Yp)
+        -the order of the curve= order of P
+    '''
+    fichier = open("data", "w")
+    z= str(rank_firstprime) +" "+ str(nb_primes)+" "+str(pas)
+    command_line=" sage Random_Curves_orderprime.sage "+z
+    args = shlex.split(command_line)
+    now = subprocess.Popen(args, stdout=subprocess.PIPE)
+    result = now.communicate()
+    a=result[0].decode("utf-8")
+    a=a.split(";")
+    e=a[0:len(a)-1]
+    for i in range(len(e)):
+        tmp=e[i].split(" ")
+        p,a,b,order=int(tmp[0]),int(tmp[1]),int(tmp[2]),int(tmp[3])
+        P=random_point2(a,b,p)
+        zprint=str(p)+" "+str(a)+" "+str(b)+" "+str(P[0])+" "+str(P[1])+" "+str(order)
+        print(zprint)
+        z=zprint+"\n"
         
+        fichier.write(z)
+    fichier.close()
 
+def generat_know(filename):
+    '''
+    return a list of 3-uplet
+    (P,p,OrderP)
+    '''
+    ts=1
+    l=[]
+    fichier=open(filename,"r")
+    for line in fichier:
+        tmp=line.split(" ")
         
-Stock(10,100)
+        tmp3=tmp[len(tmp)-1]
+        tmp[len(tmp)-1]=tmp3[0:len(tmp3)-1]
+        #print(ts)
+        ts=ts+1
+        (p,a,b,Px,Py,OrderP)=(int(tmp[0]),int(tmp[1]),int(tmp[2]),int(tmp[3]),int(tmp[4]),int(tmp[5]))
+        #z=(p,a,b,Px,Py,OrderP)
+        #print(z)
+        C=EllipticCurve3(a,b,p)
+        P=Point(C,Px,Py)
+        l.append((P,p,OrderP))
+    fichier.close()
+    return l
+
+   
+
+
+def rho_probability1(P,a,b,Z,Q,p):
+    '''
+    Fonction aléatoire
+    pour la méthode rho
+    
+    
+    '''
+   
+    
+    if isinstance(Z,Inf):
+        prob=0
+    else:
         
-'''
-a=65
-b=6
-z=str(a)+" "+str(b)+"\n\n"
-Stock(10,100,1)
-fichier = open("data", "w")
-fichier.write(z)
-fichier.write("aa")
-fichier.close()
-C=EllipticCurve3(1,1,23)
-P=Point(C,0,22)
-print(P[1])
-'''
+        A=(math.sqrt(5)-1)/2
+        c=A*Z[1]
+        u=c-math.floor(c)
+        prob=math.floor(3*u)
+    
+    if(prob  == 0):
+        #print(0)
+        a=(2*a) % p
+        b=(2*b) % p
+        Z=2*Z
+        return Z,a,b
+    elif(prob  == 1):
+        #print(1)
+        a=(a+1) % p
+        Z=Z+P
+        return Z,a,b
+    else :
+        #print(2)
+        b=(b+1) % p
+        Z=Z+Q
+        return Z,a,b
+    
+  
+def rho_random_walk(P,Q,p,ordreP):
+    '''
+
+
+    '''
+    ai=random.randint(1,ordreP-1)
+    bi=random.randint(1,ordreP-1)
+    Zi=(P*ai)+(Q*bi)
+    Zibis=Zi
+    aibis=ai
+    bibis=bi
+    i=0
+    #print("Work")
+    while(True):
+        
+        #print("Zi")
+        Zi,ai,bi=rho_probability1(P,ai,bi,Zi,Q,ordreP)
+        #print("Zibis")
+        Zibis,aibis,bibis=rho_probability1(P,aibis,bibis,Zibis,Q,ordreP)
+        Zibis,aibis,bibis=rho_probability1(P,aibis,bibis,Zibis,Q,ordreP)
+        #print('Zi,ZIBIS,Ai,Bi,Aibis,Bibis')
+        #print(Zi,Zibis,Ai,Bi,Aibis,Bibis)
+        #print(i)
+        i=i+1
+        #print("Work")
+        if(  Zi==Zibis  and (bi % ordreP) != (bibis % ordreP)):
+            
+                #print(i)
+                #print(Zi)
+                #print(Zibis)
+                #print(ai,bi,aibis,bibis)
+            break
+        elif(Zi==Zibis):
+            ai=random.randint(1,ordreP-1)
+            bi=random.randint(1,ordreP-1)
+            Zi=(P*ai)+(Q*bi)
+            Zibis=Zi
+            aibis=ai
+            bibis=bi    
+            
+
+                
+    return ((ai-aibis) *mod_inverse(-( bi-bibis),ordreP)) % ordreP,i
+
+
+    
+
+def rho_probability3(a,b,Z,p,cd):
+    '''
+    Fonction aléatoire
+    pour la méthode rho
+    
+    
+    '''
+    
+    if isinstance(Z,Inf):
+        prob=0
+    else:
+        
+        A=(math.sqrt(5)-1)/2
+        
+        c=A*Z[1]
+        u=c-math.floor(c)
+        prob=math.floor(20*u)
+
+    
+    
+    
+
+
+    #print(cd[prob][0])
+    a=(a+cd[prob][0]) % p
+    #print("point a ajouter:")
+    #print(cd[prob][1])
+   
+    #print(cd[prob][0])
+    b=(b+cd[prob][1]) % p
+    #print("point a ajouter:")
+    #print(cd[prob][1])
+    Z=Z+cd[prob][2]
+    #print(a)
+    #print(b)
+    return Z,a,b
+    
+
+
+def generatecd(P,Q,ordreP):
+    cd=[]
+    random.seed(os.urandom(ordreP))
+    for i in range(20):
+        cdi=(random.randint(0,100*(ordreP-1))%(ordreP-1))+1
+        cdj=(random.randint(0,100*(ordreP-1))%(ordreP-1))+1
+
+        #print(cdi)
+        #print(cdj)
+
+        cd.append((cdi,cdj,cdi*P+cdj*Q))
+
+
+               
+    return cd
+
+
 """
+def generatecd(P,Q,ordreP):
+    cd=[]
+    
+    for i in range(20):
+        cdi=(random.randint(0,100*(ordreP-1))%(ordreP-1))+1
+        #print(cdi)
+        if i<10:
+            cd.append((cdi,cdi*P))
+        else:
+            cd.append((cdi,cdi*Q))
+               
+    return cd
+"""
+def rho_man_linear_walk20(P,Q,p,ordreP):
+    '''
+
+
+    '''
+    cd=generatecd(P,Q,ordreP)
+    ai=random.randint(1,ordreP-1)
+    bi=random.randint(1,ordreP-1)
+    Zi=(P*ai)+(Q*bi)
+    Zibis=Zi
+    aibis=ai
+    bibis=bi
+    #print("ZOUZOUZ")
+    #print(ai)
+    #print(bi)
+    i=0
+    while(True):
+        #print("Zi")
+        Zi,ai,bi=rho_probability3(ai,bi,Zi,ordreP,cd)
+        #print(Zi)
+        #print("Zibis")
+        Zibis,aibis,bibis=rho_probability3(aibis,bibis,Zibis,ordreP,cd)
+        #print(Zibis)
+        Zibis,aibis,bibis=rho_probability3(aibis,bibis,Zibis,ordreP,cd)
+        #print(Zibis)
+        #print('Zi,ZIBIS,Ai,Bi,Aibis,Bibis')
+        #print(Zi,Zibis,Ai,Bi,Aibis,Bibis)
+        #print(i)
+        i=i+1
+        #print("Work")
+        if((bi % ordreP) != (bibis % ordreP)):
+            if(Zi==Zibis) :
+                #print(i)
+                #print(ordreP)
+                #print(Zi)
+                #print(Zibis)
+                #print(ai,bi,aibis,bibis)
+                break
+        elif(Zi==Zibis):
+            ai=random.randint(1,ordreP-1)
+            bi=random.randint(1,ordreP-1)
+            Zi=(P*ai)+(Q*bi)
+            Zibis=Zi
+            aibis=ai
+            bibis=bi    
+            
+
+                
+    
+    return ((ai-aibis) *mod_inverse(-( bi-bibis),ordreP)) % ordreP,i
+
+
+    
+def gnuplot_file(filename):
+    '''
+    
+    '''
+    fichier = open(filename,"w")
+    moyenne=100
+    l=generat_know("data")
+    #print(l)
+    mite=0.0
+    mt=0.0
+    j=0
+    for (P,p,OrderP) in l:
+        k=random.randint(1,OrderP-1)
+        Q=k*P
+        t=0
+        it=0
+        for i in range(moyenne):
+            start = time.time()
+            #res,ite=rho_man_linear_walk20(P,Q,p,OrderP)
+            res,ite=rho_random_walk(P,Q,p,OrderP)
+            
+            
+            end = time.time()
+            #print(res)
+            #print(i)
+            assert(k==res)
+            t=t+(end - start)
+            it=it+ite
+            
+        t=t/100.0
+        it=it/100.0
+        pfloat=float(p)
+        math.sqrt(pfloat)
+        Cp=((math.log(pfloat, 2.0)**2)*math.sqrt(pfloat))
+        sqrtn=math.sqrt(OrderP)
+        
+        
+        zprint=str(t)+" "+str(Cp)+" "+str(t/Cp)+" "+str(p)+" "+str(it)+" "+str(sqrtn)+" "+str(it/sqrtn)+" "+str(OrderP)
+        
+        #print(zprint)
+        z=zprint+"\n"
+        fichier.write(z)
+        j=j+1
+        if(j>1002):
+            fichier.close()
+            break
+            
+        mite=mite+it
+        mt=mt+t
+        #print(OrderP)
+        #print(sqrtn)
+        print(j)
+        print(mite/j)
+        print(mt/j)
+    #fichier.close()
+gnuplot_file("Complex_rho_man3")
+#Stock2(1000,1,1)
+

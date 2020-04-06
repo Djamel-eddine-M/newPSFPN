@@ -1,0 +1,7 @@
+plot "Complexity_rho_man_linear_walk20" u 2:3 with linespoints
+set title "Temps/((log2(p)**2)*sqrt(p)) en f°de (log2(p)**2)*sqrt(p)"
+set xlabel "Valeur de (log2(p)**2)*sqrt(p)" 
+set ylabel "Temps/((log2(p)**2)*sqrt(p))"
+set term png
+set output "2"
+replot
