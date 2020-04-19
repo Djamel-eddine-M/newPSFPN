@@ -1,7 +1,0 @@
-plot "Complex_rho_random_walk" u 6:5 
-set title "Itération en f°de sqrt(n) , n=ordre de P "
-set xlabel "sqrt(n)" 
-set ylabel "Nombre d'itérations" 
-set term png
-set output "3"
-replot
